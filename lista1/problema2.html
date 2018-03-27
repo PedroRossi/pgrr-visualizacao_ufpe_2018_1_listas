@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Problema 2</title>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://visualizacao-ufpe.github.io/data_vis_assignments/2018.1/datasetProblema2.js"></script>
+    <style>
+        body {
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+        }
+        #wrapper {
+            margin: 10px;
+            border: 1px solid black;
+            width: 500px;
+            padding: 10px;
+            text-align: center;
+        }
+        #controls {
+            border-bottom: 1px solid black;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <div id="controls">
+            <label for="year">Year:</label>
+            1990
+            <input type="range" id="year" min="1990" max="2017" value="2002"
+                onchange="highlightYear(this.value)">
+            2017
+            </div>
+        <div>
+            <svg width="500" height="520"/>
+        </div>
+    </div>
+    <script>
+        const pad = (n, size) => {
+            let s = String(n);
+            while (s.length < (size || 2))
+                s = "0" + s;
+            return s;
+        }
+        const width = 500;
+        const height = 500;        
+
+        const dataXInterval = d3.extent(dataset, d => d.year);
+        const xScale = d3.scaleLinear().domain(dataXInterval).range([0, width]);
+
+        const yScale = d3.scaleLinear().domain([0, 55]).range([height, 0]);
+
+        const dataC = ['Romance', 'Policial', 'Biografia', 'Ficcao', 'Conto', 'Cronica', 'Poesia'].map(d => d.toLowerCase())
+        const colors = ['#fbb4ae','#b3cde3','#ccebc5','#decbe4','#fed9a6','#ffffcc','#e5d8bd'];
+
+        const group = d3.select('svg')
+            .append('g')
+            .selectAll('rect')
+            .data(dataset)
+            .enter()
+            .append('g')
+
+        group.append('rect')
+            .attr('x', d => xScale(d.year) + 5)
+            .attr('y', d => yScale(d.books))
+            .attr('fill', d => colors[dataC.indexOf(d.favoriteGenre)])
+            .attr('width', 40)
+            .attr('height', d => height - yScale(d.books))
+
+        group.append('text')
+            .attr('x', d => xScale(d.year) + 17)
+            .attr('y', d => yScale(d.books) + 20)
+            .attr('fill', 'black')
+            .text(d => `${pad(d.books)}`)
+
+        group.append('text')
+            .attr('x', d => xScale(d.year) + 8)
+            .attr('y', height + 20)
+            .attr('fill', 'black')
+            .text(d => `${d.year}`)
+
+        const highlightYear = (year) => {
+            group.select('rect')
+                .attr('x', d => xScale(d.year) + 5)
+                .attr('y', d => yScale(d.books))
+                .attr('fill', d => colors[dataC.indexOf(d.favoriteGenre)])
+                .attr('width', 40)
+                .style('stroke', d => ((`${d.year}` === `${year}`) ? 'black':''))
+                .style("stroke-width", 2)
+                .attr('height', d => height - yScale(d.books))
+        }
+    </script>
+</body>
+</html>
