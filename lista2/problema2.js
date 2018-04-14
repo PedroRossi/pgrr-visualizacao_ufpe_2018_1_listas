@@ -30,9 +30,8 @@ function barsChart(data, width, height) {
 
     let aux = flightsPerCarrier;
     let arr = [];
-    let carriers = [];
+    let carriers = ['Gol', 'Tam', 'Azul'];
     Object.keys(aux).forEach(a => {
-        carriers.push(a);
         arr.push({
             carrier: a,
             numberOfFlights: flightsPerCarrier[a]
@@ -59,6 +58,8 @@ function barsChart(data, width, height) {
     const chart = d3.select('#bars')
         .attr('width', width + margin.left + margin.right)
         .attr('height', height + margin.top + margin.bottom);
+
+    chart.selectAll('g').remove();
     
     chart.append('g')
         .attr('transform', `translate(${margin.left}, ${height-margin.bottom})`)
@@ -76,31 +77,41 @@ function barsChart(data, width, height) {
         .attr('fill', 'black')
         .text('Nº of Flights per Carrier');
 
-    const bars = d3.select('#bars')
-        .selectAll('rect')
-        .data(flightsPerCarrier)
-        .enter();
+    function updateData(data) {
+        const bars = d3.select('#bars')
+            .append('g')
+            .selectAll('rect')
+            .remove()
+            .data(data)
+            .enter();
 
-    bars.append('g')
-        .append('rect')
-        .attr('transform', `translate(${margin.left + margin.right}, ${margin.top})`)
-        .attr('x', d => x(d.carrier) + 10)
-        .attr('y', d => y(d.numberOfFlights))
-        .attr('fill', 'blue')
-        .attr('width', barWidth)
-        .attr('height', d => height - margin.bottom - margin.top - y(d.numberOfFlights))
+        bars.append('rect')
+            .attr('id', d => `${d.carrier}`)
+            .attr('transform', `translate(${margin.left + margin.right}, ${margin.top})`)
+            .attr('x', d => x(d.carrier) + 10)
+            .attr('y', d => y(d.numberOfFlights))
+            .attr('fill', 'blue')
+            .attr('width', barWidth)
+            .attr('height', d => height - margin.bottom - margin.top - y(d.numberOfFlights))
+            .on('click', (d) => {
+                // bars.selectAll(`rect`).attr('fill', 'white');
+                // bars.select(`rect#${d.carrier}`).attr('fill', 'blue');
+            });
 
-    bars.append('g')
-        .append('text')
-        .attr('transform', `translate(${margin.left + margin.right}, ${margin.top})`)
-        .attr('x', d => x(d.carrier) - 5 + barWidth/2)
-        .attr('y', d => y(d.numberOfFlights) + 20)
-        .attr('fill', 'white')
-        .text(d => d.numberOfFlights)
+        bars.append('text')
+            .attr('transform', `translate(${margin.left + margin.right}, ${margin.top})`)
+            .attr('x', d => x(d.carrier) - 5 + barWidth/2)
+            .attr('y', d => y(d.numberOfFlights) + 20)
+            .attr('fill', 'white')
+            .text(d => d.numberOfFlights);
+    }
+
+    updateData(flightsPerCarrier);
+
 }
 
 // scatterplot
-function scatterplot(data, width, height) {
+function scatterplot(data, width, height, callback) {
     let dataset = data.map(d => {
         d.start = new Date(d.start.split('/').reverse().join('/'));
         d.end = new Date(d.end.split('/').reverse().join('/'));
@@ -159,7 +170,40 @@ function scatterplot(data, width, height) {
         .attr('stroke', 'black')
         .attr('stroke-width', 1);
 
+    // brush
+    const brushGroup = scatter.append("g").attr("class","brush");
+	const brush = d3.brush()
+	    .on("start", () => {
+            scatter.selectAll("circle").attr("fill","black")
+        })
+	    .on("brush", () => {
+            let selectedPoints = [];
+            let selection = d3.event.selection;
+            const diffs = {
+                x: margin.left+margin.right,
+                y: margin.top,
+            }
+            scatter.selectAll("circle")
+                .attr("fill", (d, i) => {
+                    const timeDiff = Math.abs(d.start.getTime() - d.post.getTime());
+                    const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                    const xCoord = x(diffDays)+diffs.x;
+                    const yCoord = y(d.price)+diffs.y;
+                    if (selection[0][0] <= xCoord && xCoord <= selection[1][0] &&
+                        selection[0][1] <= yCoord && yCoord <= selection[1][1]) {
+                        selectedPoints.push(d);
+                        return "blue";
+                    } else {
+                        return "black";
+                    }
+                });
+
+            if(callback)
+                callback(selectedPoints);
+	    });
+	brushGroup.call(brush);
+
 }
 
 barsChart(trips, 500, 600);
-scatterplot(trips, 500, 600);
+scatterplot(trips, 500, 600, (data) => barsChart(data, 500, 600));
