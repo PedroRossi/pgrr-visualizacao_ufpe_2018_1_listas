@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Problema 1</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/async@2.6.0/dist/async.min.js"></script>
+	<style>
+		html, body {
+            margin: 0;
+            padding: 0;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+		}
+		div {
+			border: 1px solid black;
+		}
+	</style>
+</head>
+<body>
+	<div>
+		<svg/>
+	</div>
+	<label for="filter">
+		Filtrar ocorrências por
+		<select name="filter" id="filter">
+			<option value="">-- ESCOLHA UMA OPÇÃO --</option>
+			<option value="localizacao">localização</option>
+			<option value="estado">estado</option>
+			<option value="municipio">município</option>
+		</select>
+	</label>
+	<script src="/lista3/problema1.js"></script>
+</body>
+</html>
