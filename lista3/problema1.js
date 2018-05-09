@@ -1,11 +1,14 @@
+let select = document.querySelector('select');
+
 const margin = {
-    top: 50,
+    top: 10,
     right: 20,
     left: 50,
-    bottom: 50
+    bottom: select.offsetHeight
 };
 const width = window.innerWidth - margin.left - margin.right;
 const height = window.innerHeight - margin.top - margin.bottom;
+
 
 let dataset = {
 	counties: [],
@@ -25,137 +28,142 @@ async.parallel([
 	dataset.counties = results[0];
 	dataset.states = results[1];
 	dataset.occurrences = results[2];
+	draw(dataset);
 });
 
-const projection = d3.geoMercator()
-	.translate([width/2, height/2])
-	.scale([(width+height)/3])
-	.center([-50, -20]);
+function draw(dataset) {
 
-const path = d3.geoPath()
-	.projection(projection);
+	const projection = d3.geoMercator()
+		.translate([width/2, height/2])
+		.scale([(width+height)/3])
+		.center([-50, -20]);
 
-const svg = d3.select('svg')
-	.attr('width', width)
-	.attr('height', height);
+	const path = d3.geoPath()
+		.projection(projection);
 
-const g = svg.append('g');
+	const svg = d3.select('svg')
+		.attr('width', width)
+		.attr('height', height);
 
-const zoom = d3.zoom().on('zoom', () => {
-	g.selectAll('path').style('stroke-width', `${0.5 / d3.event.transform.k}px`)
-	g.attr('transform', d3.event.transform)
-});
+	const g = svg.append('g');
 
-svg.call(zoom)
+	const zoom = d3.zoom().on('zoom', () => {
+		g.selectAll('path').style('stroke-width', `${0.5 / d3.event.transform.k}px`)
+		g.attr('transform', d3.event.transform)
+	});
 
-document.querySelector('select[name="filter"]').onchange = (ev) => {
-	const value = ev.target.value;
+	svg.call(zoom)
 
-	g.selectAll('path').remove();
-	g.selectAll('circle').remove();
-	d3.select('svg').selectAll('g').filter('.legend').remove();
+	document.querySelector('select[name="filter"]').onchange = (ev) => {
+		const value = ev.target.value;
 
-	const colorset = ['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494'];
+		g.selectAll('path').remove();
+		g.selectAll('circle').remove();
+		d3.select('svg').selectAll('g').filter('.legend').remove();
 
-	if (value === "localizacao") {
-		g.selectAll('path')
-			.data(dataset.counties.features)
-			.enter()
-			.append('path')
-			.attr('d', path)
-			.attr('id', d => d.properties.id)
-			.attr('fill', '#f5f5f5')
-			.style('stroke', 'black')
-			.style('stroke-opacity', 0.7)
-			.attr('stroke-width', 0.5);
+		const colorset = ['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#2c7fb8', '#253494'];
 
-		g.selectAll('circle')
-			.data(dataset.occurrences)
-			.enter()
-			.append('circle')
-			.attr('r', 2)
-			.attr('transform', (d) =>
-				`translate(${projection([d.ocorrencia_longitude, d.ocorrencia_latitude])})`
-			)
-			.attr('fill', (d) =>
-				d.ocorrencia_classificacao === "ACIDENTE" ? '#cf2030' : d.ocorrencia_classificacao === "INCIDENTE" ? '#64bbe3' : '#69c242'
-			)
-			.attr('fill-opacity', 0.7);
-	} else if (value === 'estado') {
-		const states = ['AC','AL','AP','AM', 'BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE', 'PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+		if (value === "localizacao") {
+			g.selectAll('path')
+				.data(dataset.counties.features)
+				.enter()
+				.append('path')
+				.attr('d', path)
+				.attr('id', d => d.properties.id)
+				.attr('fill', '#f5f5f5')
+				.style('stroke', 'black')
+				.style('stroke-opacity', 0.7)
+				.attr('stroke-width', 0.5);
 
-		let occPerState = Array(states.length).fill(0);
-		dataset.occurrences.forEach(occ => {
-			let index = states.indexOf(occ.ocorrencia_uf);
-			if (index !== -1)
-				occPerState[index]++;
-		});
+			g.selectAll('circle')
+				.data(dataset.occurrences)
+				.enter()
+				.append('circle')
+				.attr('r', 2)
+				.attr('transform', (d) =>
+					`translate(${projection([d.ocorrencia_longitude, d.ocorrencia_latitude])})`
+				)
+				.attr('fill', (d) =>
+					d.ocorrencia_classificacao === "ACIDENTE" ? '#cf2030' : d.ocorrencia_classificacao === "INCIDENTE" ? '#64bbe3' : '#69c242'
+				)
+				.attr('fill-opacity', 0.7);
+		} else if (value === 'estado') {
+			const states = ['AC','AL','AP','AM', 'BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE', 'PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
-		const interval = d3.extent(occPerState);
+			let occPerState = Array(states.length).fill(0);
+			dataset.occurrences.forEach(occ => {
+				let index = states.indexOf(occ.ocorrencia_uf);
+				if (index !== -1)
+					occPerState[index]++;
+			});
 
-		const colorScale = d3.scaleQuantize().domain(interval).range(colorset);
+			const interval = d3.extent(occPerState);
 
-		g.selectAll('path')
-			.data(dataset.states.features)
-			.enter()
-			.append('path')
-			.attr('d', path)
-			.attr('fill', (d,i) => colorScale(occPerState[states.indexOf(d.properties.sigla)]))
-			.style('stroke', 'black')
-			.style('stroke-opacity', 0.8)
-			.attr('stroke-width', 0.5);
+			const colorScale = d3.scaleQuantize().domain(interval).range(colorset);
 
-		const colorLegend = d3.legendColor()
-			.labelFormat(d3.format(".0f"))
-			.scale(colorScale);
+			g.selectAll('path')
+				.data(dataset.states.features)
+				.enter()
+				.append('path')
+				.attr('d', path)
+				.attr('fill', d => colorScale(occPerState[states.indexOf(d.properties.sigla)]))
+				.style('stroke', 'black')
+				.style('stroke-opacity', 0.8)
+				.attr('stroke-width', 0.5);
 
-		svg.append('g')
-			.attr('class', 'legend')
-			.attr('transform', `translate(${width-2*(margin.left+margin.right)}, ${margin.top})`)
-			.call(colorLegend);
+			const colorLegend = d3.legendColor()
+				.labelFormat(d3.format(".0f"))
+				.scale(colorScale);
 
-	} else if (value === 'municipio') {
-		let counties = [];
-		let occPerCounty = [];
+			svg.append('g')
+				.attr('class', 'legend')
+				.attr('transform', `translate(${width-2*(margin.left+margin.right)}, ${margin.top})`)
+				.call(colorLegend);
 
-		dataset.occurrences.forEach(occ => {
-			const lower = occ.ocorrencia_cidade.toLowerCase();
-			const index = counties.indexOf(lower);
-			if (index !== -1) {
-				occPerCounty[index]++;
-			} else {
-				counties.push(lower);
-				occPerCounty.push(1);
-			}
-		});
+		} else if (value === 'municipio') {
+			let counties = [];
+			let occPerCounty = [];
 
-		const interval = d3.extent(occPerCounty);
-		
-		const colorScale = d3.scaleQuantize()
-			.domain(interval)
-			.range(colorset);
-		
-		g.selectAll('path')
-			.data(dataset.counties.features)
-			.enter()
-			.append('path')
-			.attr('d', path)
-			.attr('fill', (d) => {
-				const lower = d.properties.name.toLowerCase();
-				const i = counties.indexOf(lower);
-				return i === -1 ? '#f5f5f5' : colorScale(occPerCounty[i]);
-			})
-			.style('stroke', 'black')
-			.style('stroke-opacity', 0.8)
-			.attr('stroke-width', 0.5);
+			dataset.occurrences.forEach(occ => {
+				const lower = occ.ocorrencia_cidade.toLowerCase();
+				const index = counties.indexOf(lower);
+				if (index !== -1) {
+					occPerCounty[index]++;
+				} else {
+					counties.push(lower);
+					occPerCounty.push(1);
+				}
+			});
 
-		const colorLegend = d3.legendColor()
-			.labelFormat(d3.format('.0f'))
-			.scale(colorScale);
+			const interval = d3.extent(occPerCounty);
+			
+			const colorScale = d3.scaleQuantize()
+				.domain(interval)
+				.range(colorset);
+			
+			g.selectAll('path')
+				.data(dataset.counties.features)
+				.enter()
+				.append('path')
+				.attr('d', path)
+				.attr('fill', d => {
+					const lower = d.properties.name.toLowerCase();
+					const i = counties.indexOf(lower);
+					return i === -1 ? '#f5f5f5' : colorScale(occPerCounty[i]);
+				})
+				.style('stroke', 'black')
+				.style('stroke-opacity', 0.8)
+				.attr('stroke-width', 0.5);
 
-		svg.append('g')
-			.attr('class', 'legend')
-			.attr('transform', `translate(${width-2*(margin.left+margin.right)}, ${margin.top})`)
-			.call(colorLegend);
-	}
-};
+			const colorLegend = d3.legendColor()
+				.labelFormat(d3.format('.0f'))
+				.scale(colorScale);
+
+			svg.append('g')
+				.attr('class', 'legend')
+				.attr('transform', `translate(${width-2*(margin.left+margin.right)}, ${margin.top})`)
+				.call(colorLegend);
+		}
+	};
+	
+}
